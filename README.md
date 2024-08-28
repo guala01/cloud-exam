@@ -43,6 +43,7 @@ The database is a generic PostgreSQL database and is not specific to the project
 
 Docker is required to run the project.
 Scaleways token keys are required to run the project.
+Java 22 is required to run the springboot application.
 
 ### Quickstart
 
@@ -59,6 +60,12 @@ Scaleways token keys are required to run the project.
 Using the provided docker files build the images under scripts/dcoker-* directories for the scraping.
 Same for the SPA docker using Dockerfile in root folder.
 Run the docker-compose.yml under springboot/ folder to build and ruin the springboot application.
+To build the springboot app you will need to have java 22 installed then run the following command:
+   ```bash
+   .\gradlew build  
+   .\gradlew bootRun
+   ```
+This will build the springboot application locate the app under the dist folder and rename it to app.jar, you can then build the docker image using the Dockerfile in the root folder.
 
 3. **Set up the environment variables:**
 
