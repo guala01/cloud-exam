@@ -14,6 +14,10 @@ import json
 import requests
 import asyncio
 import aiohttp
+import boto3
+import os
+import logging
+import logging_loki
 #from compute import compute_sales
 
 
@@ -25,18 +29,49 @@ client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
+SCALEWAY_REGION = 'fr-par'
+SCALEWAY_BUCKET_NAME = 'bdo-market-ids'
+TOKEN = os.environ['DISCORD_TOKEN']
+SCALEWAY_ACCESS_KEY = os.environ['SCALEWAY_ACCESS_KEY']
+SCALEWAY_SECRET_KEY = os.environ['SCALEWAY_SECRET_KEY']
+COCKPIT_TOKEN_SECRET_KEY = os.environ['COCKPIT_TOKEN_SECRET_KEY']
+
+
+s3_client = boto3.client('s3',
+    region_name=SCALEWAY_REGION,
+    endpoint_url=f'https://s3.{SCALEWAY_REGION}.scw.cloud',
+    aws_access_key_id=SCALEWAY_ACCESS_KEY,
+    aws_secret_access_key=SCALEWAY_SECRET_KEY
+)
+
+
+handler = logging_loki.LokiHandler(
+    url="https://logs.cockpit.fr-par.scw.cloud/loki/api/v1/push",
+    tags={"job": "discord-bot"},
+    auth=(SCALEWAY_SECRET_KEY, COCKPIT_TOKEN_SECRET_KEY),
+    version="1",
+)
+
+logger = logging.getLogger("discord-bot")
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+
 def load_registrations():
     try:
-        with open('registrations.json', 'r') as file:
-            return json.load(file)
-    except FileNotFoundError:
+        response = s3_client.get_object(Bucket=SCALEWAY_BUCKET_NAME, Key='registrations.json')
+        return json.loads(response['Body'].read().decode('utf-8'))
+    except s3_client.exceptions.NoSuchKey:
         return {}
 
 def save_registrations(data):
-    with open('registrations.json', 'w') as file:
-        json.dump(data, file, indent=4)
+    s3_client.put_object(
+        Bucket=SCALEWAY_BUCKET_NAME,
+        Key='registrations.json',
+        Body=json.dumps(data, indent=4)
+    )
 
-async def register_user(user_id, item_id, enhancement_level):
+async def register_user(user_id, item_id, enhancement_level, email=None):
     registrations = load_registrations()
     user_id_str = str(user_id)
 
@@ -45,8 +80,16 @@ async def register_user(user_id, item_id, enhancement_level):
     if user_id_str not in registrations:
         registrations[user_id_str] = []
 
+    registration = {
+        'item_id': item_id,
+        'enhancement_level': enhancement_level,
+        'item_name': item_name
+    }
+    if email:
+        registration['email'] = email
+
     if not any(reg['item_id'] == item_id and reg['enhancement_level'] == enhancement_level for reg in registrations[user_id_str]):
-        registrations[user_id_str].append({'item_id': item_id, 'enhancement_level': enhancement_level, 'item_name': item_name})
+        registrations[user_id_str].append(registration)
 
     save_registrations(registrations)
 
@@ -70,16 +113,20 @@ async def fetch_item_name(item_id, enhancement_level):
         async with session.get(f"https://api.arsha.io/v2/eu/item?id={item_id}&lang=en") as response:
             if response.status == 200:
                 items = await response.json()
-                for item in items:
-                    if str(item.get('maxEnhance', 0)) == enhancement_level:
-                        return item.get('name')
+                if isinstance(items, list):
+                    for item in items:
+                        if isinstance(item, dict) and str(item.get('maxEnhance', 0)) == enhancement_level:
+                            return item.get('name')
+                elif isinstance(items, dict):
+                    if str(items.get('maxEnhance', 0)) == enhancement_level:
+                        return items.get('name')
     return None
 
 async def check_market_data():
     while True:
         try:
-            with open('market_data.json', 'r') as file:
-                market_data = json.load(file)
+            response = s3_client.get_object(Bucket=SCALEWAY_BUCKET_NAME, Key='market_data.json')
+            market_data = json.loads(response['Body'].read().decode('utf-8'))
 
             registrations = load_registrations()
 
@@ -91,15 +138,19 @@ async def check_market_data():
                             user = await bot.fetch_user(int(user_id))
                             await user.send(f"{item_name} with enhancement level {reg['enhancement_level']} has been listed at {item['Timestamp']}")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logger.error(f"An error occurred: {e}")
 
-        await asyncio.sleep(420)  #Check every 7 minutes
+        await asyncio.sleep(420)  # Check every 7 minutes
+
 
 
 @bot.command(name='register')
-async def on_register(ctx, item_id: str, enhancement_level: str):
-    await register_user(ctx.author.id, item_id, enhancement_level)
-    await ctx.send(f"{ctx.author.mention}, you're now registered for item ID {item_id} with enhancement level {enhancement_level}.")
+async def on_register(ctx, item_id: str, enhancement_level: str, email: str = None):
+    await register_user(ctx.author.id, item_id, enhancement_level, email)
+    response = f"{ctx.author.mention}, you're now registered for item ID {item_id} with enhancement level {enhancement_level}."
+    if email:
+        response += f" Notifications will also be sent to {email}."
+    await ctx.send(response)
 
 @bot.command(name='remove')
 async def on_remove(ctx, item_id: str, enhancement_level: str):
@@ -136,6 +187,7 @@ async def on_ready():
     bot.loop.create_task(check_market_data())
 
 
-bot.run('TOKEN')
+if __name__ == "__main__":
+    bot.run(TOKEN)
 
 

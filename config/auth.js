@@ -1,6 +1,8 @@
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const config = require('./config');
+const logger = require('./logger');
+
 
 //Passport configuration
 passport.use(new DiscordStrategy({
@@ -13,7 +15,7 @@ passport.use(new DiscordStrategy({
     const { id, username, discriminator } = profile;
     return done(null, profile);
   } catch (error) {
-    console.error('Error in Discord strategy callback:', error);
+    logger.error('Error in Discord strategy callback:', error);
     return done(error, null);
   }
 }));
@@ -23,7 +25,7 @@ passport.serializeUser((user, done) => {
   try {
     done(null, user);
   } catch (error) {
-    console.error('Error serializing user:', error);
+    logger.error('Error serializing user:', error);
     done(error, null);
   }
 });
@@ -32,7 +34,7 @@ passport.deserializeUser((obj, done) => {
   try {
     done(null, obj);
   } catch (error) {
-    console.error('Error deserializing user:', error);
+    logger.error('Error deserializing user:', error);
     done(error, null);
   }
 });

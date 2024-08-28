@@ -1,9 +1,11 @@
 const { QueryTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const logger = require('../config/logger');
+
 
 async function fetchDashboardData(days) {
   try {
-    console.log(`Executing SQL query for the past ${days} days`);
+    logger.info(`Executing SQL query for the past ${days} days`);
 
     const query = `
 
@@ -60,10 +62,10 @@ async function fetchDashboardData(days) {
     `;
 
     const data = await sequelize.query(query, { type: QueryTypes.SELECT });
-    console.log(`Query executed successfully, fetched ${data.length} records`);
+    logger.info(`Query executed successfully, fetched ${data.length} records`);
     return data;
   } catch (error) {
-    console.error('Error executing SQL query:', error.message, error.stack);
+    logger.error('Error executing SQL query:', error.message, error.stack);
     throw new Error('Internal Server Error');
   }
 }

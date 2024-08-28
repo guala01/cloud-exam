@@ -10,33 +10,39 @@ The project employs a modern tech stack to deliver a responsive and secure user 
 
 - **Backend**: Node.js with Express framework, Python for API scraping
 - **Database**: PostgreSQL
-- **ORM**: Sequelize
 - **Frontend**: Vanilla JavaScript with Bootstrap
-- **View Engine**: EJS
 - **Authentication**: Discord OAuth
+- **Messaging**: Kafka
+- **Email**: Springboot
+- **Logging**: Grafana
 
-The project structure includes separate modules for routes, models, configuration, and views, ensuring a modular and maintainable codebase.
+The project uses 4 python scripts to scrape data from the marketplace and store it in the database. These scripts are to be run on a schedule to keep the data up to date.
 
-## Features
+scripts/docker-bot is a discord bot that is used to manage the registration queue. It is used to add and remove items from the queue and to view the queue.
 
-- **Login Page**: Authenticate users via Discord OAuth. Only whitelisted users can access the application.
-- **Main Dashboard/Table View**: Displays the top 10 items with the most sales in the last 24 hours. The table includes columns for Item Name, Sales in Days, and Estimated Waiting Time.
-- **Logout Functionality**: Allows users to log out from the application and refreshes to de-authorize them.
-- **User Registrations**: Displays a table of items the user is registered for based on the `registrations.json` file. This data is dynamically reloaded whenever the user refreshes the page.
-- **Customizable Sales Data**: Users can choose to see sales data for the last 7 days, 3 days, or 24 hours using buttons on the dashboard.
-- **API Scraping**: Uses a Python script to scrape the BDO marketplace API for sales data.
-- **Discord Bot**: A bot that allows users to register for an item and get notified ahead when the item is registered.
+scripts/docker-main is a python script that is used to scrape data from the marketplace and store it in the database. This is to be  run on a schedule to keep the data up to date but at the same time without getting rate limited by the game.
+
+scripts/docker-scrape is a python script that is used to do populate a file with all the id's of the items on the market. This is to be called whenever the game is updated and new items are added to the market. (Which is usually every Thursday but may vary depending on the game update schedule).
+
+scripts/docker-wlist is a python scripts that is used to fetch the waitinglist of the items on the market. This is to be called quite often so the player can be notified when an item is registered in real time.
+
+sprinboot docker-compose.yml is used to run the kafka messaging that allows for the user to also be notified via email when an item hes registered to is posted on the waiting list.
+
+db/query.sql contains the database schema and the query to fetch the data from the database.
+db/importscript.py is a python script I used to import the data from the previous local Json file to the database.
+
+Dockerfile in root folder is used to build the docker image for the SPA.
+
+The goal of the project is to move the SPA to the cloud to a serverless infrastructure where possible. As such the project requires Scaleways token keys to handle logs and storage.
+
+The database is a generic PostgreSQL database and is not specific to the project.
 
 ## Getting started with the SPA
 
 ### Requirements
 
-Ensure you have the following installed on your computer:
-
-- Node.js (v14.x or later)
-- PostgreSQL
-- Discord Developer Account
-- Python 3.10+
+Docker is required to run the project.
+Scaleways token keys are required to run the project.
 
 ### Quickstart
 
@@ -48,16 +54,16 @@ Ensure you have the following installed on your computer:
    cd bdmarket
    ```
 
-2. **Install dependencies:**
+2. **Build all the docker files**
 
-   ```bash
-   npm install
-   ```
+Using the provided docker files build the images under scripts/dcoker-* directories for the scraping.
+Same for the SPA docker using Dockerfile in root folder.
+Run the docker-compose.yml under springboot/ folder to build and ruin the springboot application.
 
 3. **Set up the environment variables:**
 
-   Create a `.env` file in the root directory and add the following variables:
-
+The environment variables needed to run everything are
+   For the SPA:
    ```plaintext
    PORT=3000
    SESSION_SECRET=your_session_secret
@@ -72,10 +78,28 @@ Ensure you have the following installed on your computer:
    DISCORD_CALLBACK_URL=http://localhost:3000/auth/callback
    WHITELISTED_USERS=comma_separated_list_of_discord_user_ids
    NODE_ENV=development
+   COCKPIT_TOKEN_SECRET_KEY=your_cockpit_token_secret_key
+   SCALEWAY_ACCESS_KEY=your_scaleway_access_key
+   SCALEWAY_REGION=your_scaleway_region
+   SCALEWAY_SECRET_KEY=your_scaleway_secret_key
+   SESSION_SECRET=your_session_secret
    ```
 
-4. **Create the PostgreSQL database:**
+For the scraping python scripts:
+   ```plaintext
+   COCKPIT_TOKEN_SECRET_KEY=your_cockpit_token_secret_key
+   KAFKA_BROKER=your_kafka_broker_url
+   SCALEWAY_ACCESS_KEY=your_scaleway_access_key
+   SCALEWAY_SECRET_KEY=your_scaleway_secret_key
+   PGPASSWORD=your_postgres_password
+   TOKEN=your_discord_token
+   ```
 
+For the springboot application they are defined under springboot/docker-compose.yml
+
+
+4. **Create the PostgreSQL database:**
+To create the database locally run the following commands:
    ```bash
    sudo -u postgres psql -c
    CREATE DATABASE market_data_db;
@@ -84,30 +108,9 @@ Ensure you have the following installed on your computer:
    
    Use the query provided in `db/query.sql` to create the required tables.
 
-5. **Populate the PostgreSQL db:**
+Otherwise run the query after connecting to whatever cloud provider of choice.
 
-   ```bash
-   cd ./scripts/
-   pip install -r requirements.txt
-   ```
+5. **Run the project:**
 
-   Run the `scripts/scrape.py` script to create the base market data json file. This script needs to be ran if the game adds new Pearl Items to the marketplace.
-
-   Fill in the database data in the `scripts/newmain.py` script and run it to populate the database with the market data, this script should be ran as often as you want to have more data points and more accurate sales overtime and preorder time estimations.
-
-   (if you have less than a few days worth of snapshots the query to retrieves salves might fail)
-
-   Run the `scripts/waitinglist.py` to to create the json containing the current waiting list data, this script should be ran very often to always have the most up to date waiting list data to be able to notify the user in time.
-
-6. **Run Discord bot:**
-
-   Run the `scripts/finalbot.py` script to start the discord bot. Using this bot commands you can create and remove items registrations.
-
-7. **Start the application:**
-
-   ```bash
-   npm start
-   ```
-
-   The application will be available at `http://localhost:3000`.
+Running the Docker under main folder will handle the SPA. Remember to add your discord id to the whitelisted users list.
 

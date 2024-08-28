@@ -3,13 +3,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Home</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <title>BDMarket - Black Desert Online Web Market</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      min-height: 100vh;
+    }
+    .navbar {
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    .navbar-nav .nav-item {
+    display: flex;
+    align-items: center;
+    }
+    .custom-nav-btn, .navbar-nav .btn {
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+    }
+    .hero {
+      padding: 100px 0;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      opacity: 0.8;
+    }
+    .btn-primary {
+      background-color: #7f00ff;
+      border: none;
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+      background-color: #9500ff;
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+    .feature-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 30px;
+      transition: all 0.3s ease;
+    }
+    .feature-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    }
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1 class="mt-5">Welcome to BDMarket</h1>
-    <a href="/login" class="btn btn-primary mt-3">Login with Discord</a>
-  </div>
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="#">BDMarket</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item me-2">
+            <a class="nav-link custom-nav-btn" href="#features">Features</a>
+          </li>
+          <li class="nav-item me-2">
+            <a class="nav-link custom-nav-btn" href="#about">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link btn btn-primary" href="/login">Login</a>
+          </li>
+        </ul>
+      </div>      
+    </div>
+  </nav>
+
+  <section class="hero text-center">
+    <div class="container">
+      <h1 class="mb-4">Dominate the BDO Market</h1>
+      <p class="lead mb-5">Track, trade, and thrive in the world of Black Desert Online with real-time market data and insights.</p>
+      <a href="/login" class="btn btn-primary btn-lg">Get Started</a>
+    </div>
+  </section>
+
+  <section id="features" class="py-5">
+    <div class="container">
+      <h2 class="text-center mb-5">Powerful Features</h2>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="feature-card text-center">
+            <div class="feature-icon">📊</div>
+            <h3>Real-time Data</h3>
+            <p>Stay ahead with up-to-the-minute market trends and prices.</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="feature-card text-center">
+            <div class="feature-icon">🔒</div>
+            <h3>Secure Access</h3>
+            <p>Login securely with Discord OAuth for exclusive market insights.</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="feature-card text-center">
+            <div class="feature-icon">🔔</div>
+            <h3>Smart Notifications</h3>
+            <p>Get instant alerts when high-value items hit the market.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="py-5 bg-dark">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h2>About BDMarket</h2>
+          <p>BDMarket is your ultimate companion for mastering the Black Desert Online marketplace. Our cutting-edge tools and real-time data empower you to make informed decisions and maximize your profits.</p>
+        </div>
+        <div class="col-md-6">
+          <lottie-player src="https://assets2.lottiefiles.com/packages/lf20_xyadoh9h.json" background="transparent" speed="1" style="width: 100%; height: 300px;" loop autoplay></lottie-player>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="py-4 bg-dark text-center">
+    <div class="container">
+      <p>&copy; 2024 BDMarket. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

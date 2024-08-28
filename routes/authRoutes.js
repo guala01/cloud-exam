@@ -1,5 +1,7 @@
 const express = require('express');
 const passport = require('passport');
+const logger = require('../config/logger');
+
 
 const router = express.Router();
 
@@ -11,10 +13,10 @@ router.get('/auth/callback', passport.authenticate('discord', {
   failureRedirect: '/login'
 }), (req, res) => {
   try {
-    console.log('User authenticated successfully:', req.user.id);
+    logger.info('User authenticated successfully:', req.user.id);
     res.redirect('/dashboard'); 
   } catch (error) {
-    console.error('Error during authentication callback:', error);
+    logger.error('Error during authentication callback:', error);
     res.status(500).send('Internal Server Error');
   }
 });
@@ -24,20 +26,20 @@ router.post('/logout', (req, res) => {
   try {
     req.logout((err) => {
       if (err) {
-        console.error('Error during logout:', err);
+        logger.error('Error during logout:', err);
         return res.status(500).send('Internal Server Error');
       }
-      console.log('User logged out successfully');
+      logger.info('User logged out successfully');
       req.session.destroy((err) => {
         if (err) {
-          console.error('Error destroying session:', err);
+          logger.error('Error destroying session:', err);
           return res.status(500).send('Internal Server Error');
         }
         res.redirect('/');
       });
     });
   } catch (error) {
-    console.error('Error during logout:', error);
+    logger.error('Error during logout:', error);
     res.status(500).send('Internal Server Error');
   }
 });

@@ -30,16 +30,29 @@ from datetime import datetime
 from unpack import unpack
 import io
 import logging
+import os
 import psycopg2
+import boto3
+import logging_loki
 
 
-logging.basicConfig(filename='main.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
-DB_HOST = 'localhost'
-DB_NAME = ''
-DB_USER = 'postgres'
-DB_PASSWORD = ''
+
+#Scaleway regions
+SCALEWAY_REGION = 'fr-par'  # or your preferred region
+SCALEWAY_BUCKET_NAME = 'bdo-market-ids'
+
+#Scaleway secrets
+SCALEWAY_ACCESS_KEY = os.environ['SCALEWAY_ACCESS_KEY']
+SCALEWAY_SECRET_KEY = os.environ['SCALEWAY_SECRET_KEY']
+COCKPIT_TOKEN_SECRET_KEY = os.environ['COCKPIT_TOKEN_SECRET_KEY']
+
+
+DB_HOST =  os.environ['PGHOST']
+DB_NAME =  os.environ['PGDATABASE']
+DB_USER = os.environ['PGUSER']
+DB_PASSWORD = os.environ['PGPASSWORD']
 
 
 conn = psycopg2.connect(
@@ -50,13 +63,32 @@ conn = psycopg2.connect(
 )
 conn.autocommit = True
 
-def read_cleaned_data(file_path):
+handler = logging_loki.LokiHandler(
+    url="https://logs.cockpit.fr-par.scw.cloud/loki/api/v1/push",
+    tags={"job": "market-scraper"},
+    auth=(SCALEWAY_SECRET_KEY, COCKPIT_TOKEN_SECRET_KEY),
+    version="1",
+)
+
+logger = logging.getLogger("market-scraper")
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+s3_client = boto3.client('s3',
+    region_name=SCALEWAY_REGION,
+    endpoint_url=f'https://s3.{SCALEWAY_REGION}.scw.cloud',
+    aws_access_key_id=SCALEWAY_ACCESS_KEY,
+    aws_secret_access_key=SCALEWAY_SECRET_KEY
+)
+def read_cleaned_data():
     try:
-        with open(file_path, 'r') as json_file:
-            return json.load(json_file)
+        response = s3_client.get_object(Bucket=SCALEWAY_BUCKET_NAME, Key='cleaned_data.json')
+        return json.loads(response['Body'].read().decode('utf-8'))
     except Exception as e:
-        logging.error(f"Error reading cleaned data from {file_path}: {e}")
+        logger.error(f"Error reading cleaned data from Scaleway Object Storage: {e}")
         return None
+
+
 
 def insert_item(item_id, item_name, cursor):
     cursor.execute("SELECT item_id FROM Items WHERE item_id = %s", (item_id,))
@@ -76,7 +108,7 @@ def insert_item_trade(item_id, snapshot_id, total_trades, amount_of_orders, curs
 
 def fetch_latest_transaction_timestamps(cleaned_data):
     if cleaned_data is None:
-        logging.error("Cleaned data is None, skipping fetch_latest_transaction_timestamps.")
+        logger.error("Cleaned data is None, skipping fetch_latest_transaction_timestamps.")
         return "Error: No cleaned data provided."
 
     url = "https://eu-trade.naeu.playblackdesert.com/Trademarket/GetWorldMarketSubList"
@@ -117,24 +149,25 @@ def fetch_latest_transaction_timestamps(cleaned_data):
 
                 insert_item(item["id"], item["name"], cursor)
                 insert_item_trade(item["id"], snapshot_id, total_trades, amount_of_orders, cursor)
-                time.sleep(0.5) #Change the timer to not get rate limited or swap to using proxies to run multiples queries
+                time.sleep(0.3) #Change the timer to not get rate limited or swap to using proxies to run multiples queries
         except Exception as e:
-            logging.error(f"Error processing item {item['id']}: {e}")
+            logger.error(f"Error processing item {item['id']}: {e}")
             continue
 
     cursor.close()
-    logging.info(f"Updated data successfully saved to the database.")
+    logger.info(f"Updated data successfully saved to the database.")
     return "Updated data with timestamps and total trades successfully saved."
 
 
 try:
-    cleaned_data = read_cleaned_data('cleaned_data.json')
+    cleaned_data = read_cleaned_data()
     if cleaned_data:
         print(fetch_latest_transaction_timestamps(cleaned_data))
     else:
-        logging.error("Failed to load cleaned data.")
+        logger.error("Failed to load cleaned data from Scaleway Object Storage.")
 except Exception as e:
-    logging.error(f"An unexpected error occurred: {e}")
+    logger.error(f"An unexpected error occurred: {e}")
+
 
 
 conn.close()

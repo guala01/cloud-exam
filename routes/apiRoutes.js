@@ -3,6 +3,8 @@ const router = express.Router();
 const { isAuthenticated } = require('../config/middlewares');
 const { fetchDashboardData } = require('../utils/sqlQueries');
 const { isValidDays } = require('../utils/validators');
+const logger = require('../config/logger');
+
 
 //Data fetching route
 router.get('/dashboardData', isAuthenticated, async (req, res) => {
@@ -14,16 +16,16 @@ router.get('/dashboardData', isAuthenticated, async (req, res) => {
 
   try {
     if (!isValidDays(days)) {
-      console.log(`Invalid days parameter: ${days}`);
+      logger.info(`Invalid days parameter: ${days}`);
       return res.status(400).json({ message: 'Invalid days parameter' });
     }
 
-    console.log(`Fetching data for user: ${req.user.id} for the past ${days} days`);
+    logger.info(`Fetching data for user: ${req.user.id} for the past ${days} days`);
     const data = await fetchDashboardData(days);
 
     res.json(data);
   } catch (error) {
-    console.error('Error fetching data:', error.message, error.stack);
+    logger.error('Error fetching data:', error.message, error.stack);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });

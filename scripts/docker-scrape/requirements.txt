@@ -1,0 +1,6 @@
+boto3==1.34.149
+python_logging_loki==0.3.1
+Requests==2.32.3
+scaleway_sdk==1.15.0
+scaleway==2.5.0
+scaleway-core==2.5.0

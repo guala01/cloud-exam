@@ -1,8 +1,10 @@
 const { Sequelize } = require('sequelize');
-const config = require('../config/config');
+const config = require('./config');
+const logger = require('./logger'); 
 
-//Squelize still gives errors on db migration even if configuration is loaded properly
-//console.log('Database configuration:', config);
+process.env.PGSSLMODE = 'require';
+
+//logger.info('Database configuration:', config);
 
 const sequelize = new Sequelize(
   config.dbName, 
@@ -12,16 +14,22 @@ const sequelize = new Sequelize(
     host: config.dbHost,
     port: config.dbPort,
     dialect: 'postgres',
-    logging: false, //Turn on for database queries logging in console
+    logging: false, // Ensure logger is correctly used (msg) => logger.info(msg)
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    }
   }
 );
 
 sequelize.authenticate()
   .then(() => {
-    console.log('Connection to the PostgreSQL database has been established successfully.');
+    logger.info('Connection to the PostgreSQL database has been established successfully.');
   })
   .catch(err => {
-    console.error('Unable to connect to the database:', err);
+    logger.error('Unable to connect to the database:', err);
   });
 
 module.exports = sequelize;

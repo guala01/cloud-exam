@@ -1,5 +1,6 @@
 const config = require('./config');
 const loadRegistrations = require('./registrationMiddleware');
+const logger = require('./logger');
 
 
 function isWhitelisted(userId) {
@@ -11,14 +12,14 @@ function isWhitelisted(userId) {
 function isAuthenticated(req, res, next) {
   loadRegistrations(req, res, () => {
     if (!req.isAuthenticated()) {
-      console.log('User is not authenticated');
+      logger.info('User is not authenticated');
       return res.status(401).json({ message: 'Unauthorized' });
     }
     if (!isWhitelisted(req.user.id)) {
-      console.log(`User ${req.user.id} is not whitelisted`);
+      logger.info(`User ${req.user.id} is not whitelisted`);
       return res.status(403).json({ message: 'Forbidden' });
     }
-    console.log(`User ${req.user.id} is authenticated and whitelisted`);
+    logger.info(`User ${req.user.id} is authenticated and whitelisted`);
     return next();
   });
 }

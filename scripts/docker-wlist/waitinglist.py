@@ -14,8 +14,40 @@ import requests
 import datetime
 import json
 import logging
+import logging_loki
+import boto3
+import os
+from kafka import KafkaProducer
+#logging.basicConfig(filename='wlist.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+#Scaleway configuration
+SCALEWAY_REGION = 'fr-par'
+SCALEWAY_BUCKET_NAME = 'bdo-market-ids'
+SCALEWAY_ACCESS_KEY = os.environ['SCALEWAY_ACCESS_KEY']
+SCALEWAY_SECRET_KEY = os.environ['SCALEWAY_SECRET_KEY']
+COCKPIT_TOKEN_SECRET_KEY = os.environ['COCKPIT_TOKEN_SECRET_KEY']
+#Kafka configuration
+KAFKA_BROKER = os.environ['KAFKA_BROKER']
+KAFKA_TOPIC = 'waitinglist-updates'
+producer = KafkaProducer(bootstrap_servers=[KAFKA_BROKER])
 
-logging.basicConfig(filename='wlist.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+handler = logging_loki.LokiHandler(
+    url="https://logs.cockpit.fr-par.scw.cloud/loki/api/v1/push",
+    tags={"job": "waitinglist-function"},
+    auth=(SCALEWAY_SECRET_KEY, COCKPIT_TOKEN_SECRET_KEY),
+    version="1",
+)
+
+logger = logging.getLogger("waitinglist-function")
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+
+s3_client = boto3.client('s3',
+    region_name=SCALEWAY_REGION,
+    endpoint_url=f'https://s3.{SCALEWAY_REGION}.scw.cloud',
+    aws_access_key_id=SCALEWAY_ACCESS_KEY,
+    aws_secret_access_key=SCALEWAY_SECRET_KEY
+)
 
 def fetch_and_parse_market_data():
     url = "https://eu-trade.naeu.playblackdesert.com/Trademarket/GetWorldMarketWaitList"
@@ -60,14 +92,33 @@ def parse_data(data):
     return parsed_items
 
 def save_to_json(data, filename="market_data.json"):
+    json_data = json.dumps(data, indent=4)
+    s3_client.put_object(
+        Bucket=SCALEWAY_BUCKET_NAME,
+        Key=filename,
+        Body=json_data
+    )
+    logger.info(f"Market data successfully saved to {filename} in Scaleway Object Storage.")
+    #Send message to Kafka que
+    message = {
+        'bucket': SCALEWAY_BUCKET_NAME,
+        'key': filename,
+        'timestamp': datetime.datetime.now().isoformat()
+    }
+    producer.send(KAFKA_TOPIC, json.dumps(message).encode('utf-8'))
+    producer.flush()
+    logger.info(f"Kafka message sent for {filename} update")
 
-    with open(filename, 'w') as json_file:
-        json.dump(data, json_file, indent=4)
-        logging.info(f"Market data successfully saved to {filename}.")
 def main():
     market_data = fetch_and_parse_market_data()
-    if market_data is not None and market_data:  
+    if market_data is not None and market_data:
         save_to_json(market_data)
+    logger.info("Waiting list data processing completed.")
 
+#not sure I need this was in SO
+def handle(event, context):
+    main()
+    return {"statusCode": 200, "body": "Waiting list data processed successfully"}
 
-main()
+if __name__ == "__main__":
+    main()
