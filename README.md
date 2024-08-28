@@ -97,8 +97,8 @@ For the scraping python scripts:
 
 For the springboot application they are defined under springboot/docker-compose.yml
 
-
 4. **Create the PostgreSQL database:**
+   
 To create the database locally run the following commands:
    ```bash
    sudo -u postgres psql -c
