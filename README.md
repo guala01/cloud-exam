@@ -16,6 +16,8 @@ The project employs a modern tech stack to deliver a responsive and secure user 
 - **Email**: Springboot
 - **Logging**: Grafana
 
+
+
 The project uses 4 python scripts to scrape data from the marketplace and store it in the database. These scripts are to be run on a schedule to keep the data up to date.
 
 scripts/docker-bot is a discord bot that is used to manage the registration queue. It is used to add and remove items from the queue and to view the queue.
